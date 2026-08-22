@@ -18,6 +18,10 @@ public partial class MainWindow : Window
 
     private readonly LowLevelKeyboardHook _keyboardHook = new();
     private readonly DispatcherTimer _reHideTaskbarTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
+    private readonly TaskbarWatcher _taskbarWatcher = new();
+
+    private readonly DispatcherTimer _fullscreenCheckTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
+    private bool _hiddenForFullscreen;
 
     private readonly RunningAppsService _runningApps = new();
     private readonly DispatcherTimer _appsRefreshTimer = new() { Interval = TimeSpan.FromSeconds(2) };
@@ -62,6 +66,10 @@ public partial class MainWindow : Window
             TaskbarService.HideAll();
         };
         _keyboardHook.KeyDown += OnGlobalKeyDown;
+        _taskbarWatcher.SuppressRehide = () => _reHideTaskbarTimer.IsEnabled;
+
+        _fullscreenCheckTimer.Tick += (_, _) => UpdateFullscreenSuppression();
+        _fullscreenCheckTimer.Start();
 
         _pinRetryTimer.Tick += (_, _) => TryPinToAllDesktops();
 
@@ -151,6 +159,16 @@ public partial class MainWindow : Window
         {
             Log.Write($"Failed to register AppBar:\n{ex}");
         }
+    }
+
+    private void UpdateFullscreenSuppression()
+    {
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var isFullscreen = FullscreenDetector.IsForegroundWindowFullscreen(hwnd);
+        if (isFullscreen == _hiddenForFullscreen) return;
+
+        _hiddenForFullscreen = isFullscreen;
+        Visibility = isFullscreen ? Visibility.Hidden : Visibility.Visible;
     }
 
     private void OnVirtualDesktopChanged(object? sender, VirtualDesktopChangedEventArgs e)
@@ -369,7 +387,9 @@ public partial class MainWindow : Window
         _appsRefreshTimer.Stop();
         _pinRetryTimer.Stop();
         _reHideTaskbarTimer.Stop();
+        _fullscreenCheckTimer.Stop();
         _keyboardHook.Dispose();
+        _taskbarWatcher.Dispose();
         VirtualDesktop.CurrentChanged -= OnVirtualDesktopChanged;
         _appBar.Unregister();
         TaskbarService.ShowAll();
