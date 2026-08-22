@@ -14,6 +14,7 @@ internal sealed class TaskbarWatcher : IDisposable
     private const uint EVENT_OBJECT_SHOW = 0x8002;
     private const uint WINEVENT_OUTOFCONTEXT = 0x0000;
     private const int OBJID_WINDOW = 0;
+    private const uint GA_ROOT = 2;
 
     private delegate void WinEventDelegate(IntPtr hWinEventHook, uint eventType, IntPtr hwnd,
         int idObject, int idChild, uint dwEventThread, uint dwmsEventTime);
@@ -25,6 +26,9 @@ internal sealed class TaskbarWatcher : IDisposable
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     private static extern bool UnhookWinEvent(IntPtr hWinEventHook);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetAncestor(IntPtr hwnd, uint gaFlags);
 
     // Kept alive for the lifetime of the hook - otherwise the GC can collect the delegate out
     // from under the unmanaged callback, the same hazard as LowLevelKeyboardHook's _proc field.
@@ -55,15 +59,21 @@ internal sealed class TaskbarWatcher : IDisposable
     private void OnWinEvent(IntPtr hWinEventHook, uint eventType, IntPtr hwnd, int idObject, int idChild,
         uint dwEventThread, uint dwmsEventTime)
     {
-        if (idObject != OBJID_WINDOW || hwnd == IntPtr.Zero) return;
+        if (hwnd == IntPtr.Zero) return;
         if (SuppressRehide?.Invoke() == true) return;
 
+        // A show event can fire on a child control of the tray window rather than the tray
+        // window itself (e.g. during the virtual-desktop-switch animation) - resolve to the
+        // top-level window before checking its class.
+        var root = idObject == OBJID_WINDOW ? hwnd : GetAncestor(hwnd, GA_ROOT);
+        if (root == IntPtr.Zero) return;
+
         var sb = new StringBuilder(256);
-        NativeMethods.GetClassName(hwnd, sb, sb.Capacity);
+        NativeMethods.GetClassName(root, sb, sb.Capacity);
         var className = sb.ToString();
         if (className is "Shell_TrayWnd" or "Shell_SecondaryTrayWnd")
         {
-            NativeMethods.ShowWindow(hwnd, NativeMethods.SW_HIDE);
+            NativeMethods.ShowWindow(root, NativeMethods.SW_HIDE);
         }
     }
 

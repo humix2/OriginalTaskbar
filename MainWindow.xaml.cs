@@ -18,7 +18,15 @@ public partial class MainWindow : Window
 
     private readonly LowLevelKeyboardHook _keyboardHook = new();
     private readonly DispatcherTimer _reHideTaskbarTimer = new() { Interval = TimeSpan.FromSeconds(1.5) };
+    private bool _winKeyIsDown;
+    private bool _otherKeyPressedDuringWin;
     private readonly TaskbarWatcher _taskbarWatcher = new();
+
+    // Belt-and-suspenders: whatever shows the taskbar back (a virtual-desktop-switch animation,
+    // an Explorer-restart, a Windows 11 transition window we've never seen before, ...), this
+    // guarantees it gets hidden again within one interval, without needing to reverse-engineer
+    // exactly how Explorer did it this time.
+    private readonly DispatcherTimer _taskbarEnforceTimer = new() { Interval = TimeSpan.FromMilliseconds(150) };
 
     private readonly DispatcherTimer _fullscreenCheckTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
     private bool _hiddenForFullscreen;
@@ -66,10 +74,17 @@ public partial class MainWindow : Window
             TaskbarService.HideAll();
         };
         _keyboardHook.KeyDown += OnGlobalKeyDown;
+        _keyboardHook.KeyUp += OnGlobalKeyUp;
         _taskbarWatcher.SuppressRehide = () => _reHideTaskbarTimer.IsEnabled;
 
         _fullscreenCheckTimer.Tick += (_, _) => UpdateFullscreenSuppression();
         _fullscreenCheckTimer.Start();
+
+        _taskbarEnforceTimer.Tick += (_, _) =>
+        {
+            if (!_reHideTaskbarTimer.IsEnabled) TaskbarService.HideAll();
+        };
+        _taskbarEnforceTimer.Start();
 
         _pinRetryTimer.Tick += (_, _) => TryPinToAllDesktops();
 
@@ -176,7 +191,14 @@ public partial class MainWindow : Window
         // Raised from the VirtualDesktop library's own internal listener thread, not our UI
         // thread - touching the Window (even just its handle) from here throws. Hop to the
         // Dispatcher first.
-        Dispatcher.BeginInvoke(() => { _ = RefreshRunningAppsAsync(); });
+        Dispatcher.BeginInvoke(() =>
+        {
+            // Explorer's own virtual-desktop-switch animation re-shows the taskbar on its own;
+            // react immediately here rather than waiting for _taskbarEnforceTimer's next tick.
+            if (!_reHideTaskbarTimer.IsEnabled) TaskbarService.HideAll();
+
+            _ = RefreshRunningAppsAsync();
+        });
     }
 
     private async Task RefreshRunningAppsAsync()
@@ -210,10 +232,29 @@ public partial class MainWindow : Window
 
     private void OnGlobalKeyDown(int vkCode)
     {
+        if (vkCode == NativeMethods.VK_LWIN || vkCode == NativeMethods.VK_RWIN)
+        {
+            _winKeyIsDown = true;
+            _otherKeyPressedDuringWin = false;
+            return;
+        }
+
+        // Any other key going down while Win is held marks this as a combo (Win+1, Win+D, a
+        // virtual-desktop-switch hotkey, ...) rather than a bare tap of the Windows key - those
+        // don't need our taskbar revealed, and revealing it was exactly what made every Win+1
+        // desktop switch flash the taskbar for the full grace period.
+        if (_winKeyIsDown) _otherKeyPressedDuringWin = true;
+    }
+
+    private void OnGlobalKeyUp(int vkCode)
+    {
         if (vkCode != NativeMethods.VK_LWIN && vkCode != NativeMethods.VK_RWIN) return;
 
-        // Windows key was pressed somewhere on the system: reveal the taskbar so Start
-        // menu / Win+X etc. behave normally, then hide it again after a short grace period.
+        _winKeyIsDown = false;
+        if (_otherKeyPressedDuringWin) return;
+
+        // The Windows key was tapped alone: reveal the taskbar so Start menu behaves normally,
+        // then hide it again after a short grace period.
         TaskbarService.ShowAll();
         _reHideTaskbarTimer.Stop();
         _reHideTaskbarTimer.Start();
@@ -388,6 +429,7 @@ public partial class MainWindow : Window
         _pinRetryTimer.Stop();
         _reHideTaskbarTimer.Stop();
         _fullscreenCheckTimer.Stop();
+        _taskbarEnforceTimer.Stop();
         _keyboardHook.Dispose();
         _taskbarWatcher.Dispose();
         VirtualDesktop.CurrentChanged -= OnVirtualDesktopChanged;

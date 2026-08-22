@@ -9,6 +9,7 @@ internal sealed class LowLevelKeyboardHook : IDisposable
     private IntPtr _hookHandle = IntPtr.Zero;
 
     public event Action<int>? KeyDown;
+    public event Action<int>? KeyUp;
 
     public LowLevelKeyboardHook()
     {
@@ -19,10 +20,17 @@ internal sealed class LowLevelKeyboardHook : IDisposable
 
     private IntPtr HookCallback(int nCode, IntPtr wParam, IntPtr lParam)
     {
-        if (nCode >= 0 && (wParam == NativeMethods.WM_KEYDOWN || wParam == NativeMethods.WM_SYSKEYDOWN))
+        if (nCode >= 0)
         {
             var data = System.Runtime.InteropServices.Marshal.PtrToStructure<NativeMethods.KBDLLHOOKSTRUCT>(lParam);
-            KeyDown?.Invoke((int)data.vkCode);
+            if (wParam == NativeMethods.WM_KEYDOWN || wParam == NativeMethods.WM_SYSKEYDOWN)
+            {
+                KeyDown?.Invoke((int)data.vkCode);
+            }
+            else if (wParam == NativeMethods.WM_KEYUP || wParam == NativeMethods.WM_SYSKEYUP)
+            {
+                KeyUp?.Invoke((int)data.vkCode);
+            }
         }
 
         // Always pass the event through - we only observe, never suppress the Windows key.
