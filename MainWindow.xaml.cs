@@ -35,6 +35,9 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _appsRefreshTimer = new() { Interval = TimeSpan.FromSeconds(2) };
     private bool _isRefreshingApps;
 
+    private readonly TrayIconMirrorService _trayIconMirror = new();
+    private readonly DispatcherTimer _trayIconRefreshTimer = new() { Interval = TimeSpan.FromSeconds(2) };
+
     private readonly AppBarService _appBar = new();
     private readonly DispatcherTimer _pinRetryTimer = new() { Interval = TimeSpan.FromMilliseconds(300) };
     private int _pinAttempts;
@@ -66,6 +69,9 @@ public partial class MainWindow : Window
         // taskbar-restore cleanup). Runs on its own slower timer, off the UI thread.
         _appsRefreshTimer.Tick += async (_, _) => await RefreshRunningAppsAsync();
         _appsRefreshTimer.Start();
+
+        _trayIconRefreshTimer.Tick += (_, _) => RefreshTrayIcons();
+        _trayIconRefreshTimer.Start();
 
         TaskbarService.HideAll();
         _reHideTaskbarTimer.Tick += (_, _) =>
@@ -104,6 +110,24 @@ public partial class MainWindow : Window
             TryRegisterAppBar();
         };
         VirtualDesktop.CurrentChanged += OnVirtualDesktopChanged;
+    }
+
+    private void RefreshTrayIcons()
+    {
+        try
+        {
+            TrayIconList.ItemsSource = _trayIconMirror.GetNotifyIcons();
+        }
+        catch (Exception ex)
+        {
+            Log.Write($"Failed to refresh tray icons: {ex.Message}");
+        }
+    }
+
+    private void TrayIcon_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { Tag: TrayIconInfo info }) return;
+        TrayIconMirrorService.Invoke(info.Element);
     }
 
     private static void LogStartupDiagnostics()
@@ -439,6 +463,7 @@ public partial class MainWindow : Window
     {
         _timer.Stop();
         _appsRefreshTimer.Stop();
+        _trayIconRefreshTimer.Stop();
         _pinRetryTimer.Stop();
         _reHideTaskbarTimer.Stop();
         _fullscreenCheckTimer.Stop();
