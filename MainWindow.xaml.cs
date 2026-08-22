@@ -90,6 +90,11 @@ public partial class MainWindow : Window
 
         SourceInitialized += (_, _) =>
         {
+            // ShowInTaskbar="False" alone keeps us off the taskbar button strip, but Alt+Tab
+            // uses a separate rule (WS_EX_TOOLWINDOW, no WS_EX_APPWINDOW) - without it, this
+            // always-running bar shows up as an entry that does nothing useful to switch to.
+            HideFromAltTab();
+
             // The library's first call spins up an internal message-only window that requires
             // an STA thread. Force that init to happen here, on the UI thread, before the apps
             // list refresh (which runs on a background ThreadPool/MTA thread) can ever trigger
@@ -161,6 +166,14 @@ public partial class MainWindow : Window
         }
 
         if (!_pinRetryTimer.IsEnabled) _pinRetryTimer.Start();
+    }
+
+    private void HideFromAltTab()
+    {
+        var hwnd = new System.Windows.Interop.WindowInteropHelper(this).Handle;
+        var exStyle = (long)NativeMethods.GetWindowLongPtr(hwnd, NativeMethods.GWL_EXSTYLE);
+        exStyle = (exStyle | NativeMethods.WS_EX_TOOLWINDOW) & ~NativeMethods.WS_EX_APPWINDOW;
+        NativeMethods.SetWindowLongPtr(hwnd, NativeMethods.GWL_EXSTYLE, (IntPtr)exStyle);
     }
 
     private void TryRegisterAppBar()

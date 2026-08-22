@@ -82,6 +82,9 @@ internal static class NativeMethods
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtr")]
     public static extern IntPtr GetWindowLongPtr(IntPtr hWnd, int nIndex);
 
+    [DllImport("user32.dll", EntryPoint = "SetWindowLongPtr")]
+    public static extern IntPtr SetWindowLongPtr(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
+
     [DllImport("user32.dll")]
     public static extern int GetWindowTextLength(IntPtr hWnd);
 
