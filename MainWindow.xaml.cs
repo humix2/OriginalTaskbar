@@ -306,6 +306,7 @@ public partial class MainWindow : Window
         switch (key)
         {
             case "Clock": _settings.ShowClock = !_settings.ShowClock; break;
+            case "ClockSeconds": _settings.ShowClockSeconds = !_settings.ShowClockSeconds; break;
             case "Cpu": _settings.ShowCpu = !_settings.ShowCpu; break;
             case "Memory": _settings.ShowMemory = !_settings.ShowMemory; break;
             case "Network": _settings.ShowNetwork = !_settings.ShowNetwork; break;
@@ -332,6 +333,7 @@ public partial class MainWindow : Window
         RunningAppsList.Visibility = ToVisibility(_settings.ShowRunningApps);
 
         ShowClockMenuItem.IsChecked = _settings.ShowClock;
+        ShowClockSecondsMenuItem.IsChecked = _settings.ShowClockSeconds;
         ShowCpuMenuItem.IsChecked = _settings.ShowCpu;
         ShowMemoryMenuItem.IsChecked = _settings.ShowMemory;
         ShowNetworkMenuItem.IsChecked = _settings.ShowNetwork;
@@ -367,7 +369,7 @@ public partial class MainWindow : Window
 
     private void Timer_Tick(object? sender, EventArgs e)
     {
-        ClockLabel.Text = DateTime.Now.ToString("HH:mm:ss");
+        ClockLabel.Text = DateTime.Now.ToString(_settings.ShowClockSeconds ? "HH:mm:ss" : "HH:mm");
         CpuLabel.Text = $"{_cpuCounter.NextValue():F0}%";
 
         var (_, _, usedPercent) = GetMemoryInfo();

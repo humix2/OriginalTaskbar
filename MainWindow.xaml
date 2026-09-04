@@ -12,6 +12,7 @@
     <Window.ContextMenu>
         <ContextMenu>
             <MenuItem Header="時計を表示" IsCheckable="True" x:Name="ShowClockMenuItem" Tag="Clock" Click="ToggleVisibility_Click"/>
+            <MenuItem Header="時計に秒を表示" IsCheckable="True" x:Name="ShowClockSecondsMenuItem" Tag="ClockSeconds" Click="ToggleVisibility_Click"/>
             <MenuItem Header="CPUを表示" IsCheckable="True" x:Name="ShowCpuMenuItem" Tag="Cpu" Click="ToggleVisibility_Click"/>
             <MenuItem Header="メモリを表示" IsCheckable="True" x:Name="ShowMemoryMenuItem" Tag="Memory" Click="ToggleVisibility_Click"/>
             <MenuItem Header="ネットワークを表示" IsCheckable="True" x:Name="ShowNetworkMenuItem" Tag="Network" Click="ToggleVisibility_Click"/>
@@ -34,7 +35,7 @@
                     HorizontalAlignment="Left"
                     Margin="12,0,0,0"
                     TextElement.FontFamily="BIZ UDPGothic">
-            <TextBlock x:Name="ClockLabel" Width="85" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+            <TextBlock x:Name="ClockLabel" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
             <TextBlock x:Name="BatterySeparator" Text="  |  " Foreground="Gray" FontSize="13" VerticalAlignment="Center"/>
             <StackPanel x:Name="BatteryGroup" Orientation="Horizontal">
                 <TextBlock x:Name="BatteryIcon" Width="20" TextAlignment="Center" Foreground="White" FontSize="13" VerticalAlignment="Center"/>

@@ -6,6 +6,7 @@ namespace OriginalTaskbar;
 internal sealed class AppSettings
 {
     public bool ShowClock { get; set; } = true;
+    public bool ShowClockSeconds { get; set; } = true;
     public bool ShowCpu { get; set; } = true;
     public bool ShowMemory { get; set; } = true;
     public bool ShowNetwork { get; set; } = true;
