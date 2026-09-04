@@ -92,6 +92,20 @@ internal sealed class TrayIconMirrorService
         return icon;
     }
 
+    // Some tray tooltips append a status suffix to the app name (e.g. Steam shows
+    // "Steam - 作業中" while online/in-game), so an exact match against the process name
+    // would silently fail and leave the icon blank. Accept a prefix match as long as the
+    // character right after the process name isn't alphanumeric, to avoid e.g. matching
+    // "steam" against "SteamService".
+    private static bool NameMatchesProcess(string appName, string processName)
+    {
+        if (string.Equals(appName, processName, StringComparison.OrdinalIgnoreCase)) return true;
+
+        return appName.Length > processName.Length
+            && appName.StartsWith(processName, StringComparison.OrdinalIgnoreCase)
+            && !char.IsLetterOrDigit(appName[processName.Length]);
+    }
+
     private static ImageSource? ExtractIconForProcessName(string appName)
     {
         string? exePath = null;
@@ -102,7 +116,7 @@ internal sealed class TrayIconMirrorService
             {
                 try
                 {
-                    if (!string.Equals(process.ProcessName, appName, StringComparison.OrdinalIgnoreCase)) continue;
+                    if (!NameMatchesProcess(appName, process.ProcessName)) continue;
                     exePath = process.MainModule?.FileName;
                     if (exePath != null) break;
                 }
