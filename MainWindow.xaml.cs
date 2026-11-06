@@ -340,6 +340,30 @@ public partial class MainWindow : Window
         ShowBatteryMenuItem.IsChecked = _settings.ShowBattery;
         ShowDesktopLabelMenuItem.IsChecked = _settings.ShowDesktopLabel;
         ShowRunningAppsMenuItem.IsChecked = _settings.ShowRunningApps;
+
+        UpdateSeparators();
+    }
+
+    // Each separator sits in front of its item, so it's only shown when the item is visible
+    // and something visible comes before it - otherwise a stray "|" would lead the group.
+    private void UpdateSeparators()
+    {
+        var anyBefore = false;
+        foreach (var (item, separator) in new (UIElement, UIElement)[]
+                 {
+                     (BatteryGroup, BatterySeparator),
+                     (CpuGroup, CpuSeparator),
+                     (MemoryGroup, MemorySeparator),
+                     (NetworkLabel, NetworkSeparator),
+                 })
+        {
+            var visible = item.Visibility == Visibility.Visible;
+            separator.Visibility = ToVisibility(visible && anyBefore);
+            anyBefore |= visible;
+        }
+
+        ClockSeparator.Visibility = ToVisibility(
+            ClockLabel.Visibility == Visibility.Visible && DesktopLabel.Visibility == Visibility.Visible);
     }
 
     private static Visibility ToVisibility(bool show) => show ? Visibility.Visible : Visibility.Collapsed;
@@ -350,7 +374,7 @@ public partial class MainWindow : Window
         {
             _batteryPresent = false;
             BatteryGroup.Visibility = Visibility.Collapsed;
-            BatterySeparator.Visibility = Visibility.Collapsed;
+            UpdateSeparators();
             return;
         }
 
@@ -359,7 +383,7 @@ public partial class MainWindow : Window
 
         var visible = _batteryPresent && _settings.ShowBattery;
         BatteryGroup.Visibility = ToVisibility(visible);
-        BatterySeparator.Visibility = ToVisibility(visible);
+        UpdateSeparators();
         if (!visible) return;
 
         var isCharging = status.ACLineStatus == NativeMethods.AC_LINE_ONLINE;

@@ -35,7 +35,6 @@
                     HorizontalAlignment="Left"
                     Margin="12,0,0,0"
                     TextElement.FontFamily="BIZ UDPGothic">
-            <TextBlock x:Name="ClockLabel" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
             <TextBlock x:Name="BatterySeparator" Text="  |  " Foreground="Gray" FontSize="13" VerticalAlignment="Center"/>
             <StackPanel x:Name="BatteryGroup" Orientation="Horizontal">
                 <TextBlock x:Name="BatteryIcon" Width="20" TextAlignment="Center" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
@@ -89,11 +88,13 @@
             </ItemsControl.ItemTemplate>
         </ItemsControl>
 
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
+                    Margin="0,0,12,0">
         <ItemsControl x:Name="TrayIconList"
-                      Grid.Column="1"
-                      VerticalAlignment="Center"
-                      HorizontalAlignment="Right"
-                      Margin="0,0,110,0">
+                      VerticalAlignment="Center">
             <ItemsControl.ItemsPanel>
                 <ItemsPanelTemplate>
                     <StackPanel Orientation="Horizontal"/>
@@ -115,11 +116,22 @@
         </ItemsControl>
 
         <TextBlock x:Name="DesktopLabel"
-                   Grid.Column="1"
-                   HorizontalAlignment="Right"
                    VerticalAlignment="Center"
-                   Margin="0,0,12,0"
+                   Margin="10,0,0,0"
                    Foreground="White"
                    FontSize="13"/>
+        <TextBlock x:Name="ClockSeparator"
+                   Text="|"
+                   VerticalAlignment="Center"
+                   Margin="10,0,0,0"
+                   Foreground="Gray"
+                   FontSize="13"/>
+        <TextBlock x:Name="ClockLabel"
+                   VerticalAlignment="Center"
+                   Margin="10,0,0,0"
+                   Foreground="White"
+                   FontSize="13"
+                   FontFamily="BIZ UDPGothic"/>
+        </StackPanel>
     </Grid>
 </Window>
